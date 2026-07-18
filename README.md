@@ -1,73 +1,53 @@
-# Minimal Notifications
+# minimal-notifications
 
-Two lightweight macOS clipboard-change indicators, built as an exploration of
-notification design that stays out of the way — no banners, no Notification
-Center clutter, no clicks required to dismiss.
+Two lightweight macOS clipboard-change indicators, built as an exploration of notification design that stays out of the way entirely — no banners, no Notification Center clutter, no click required to dismiss.
 
-## 1. Audio Whisper
+---
 
-The most minimal visual notification is no visual notification at all.
+## Overview
 
-A background shell script polls the clipboard and plays a quiet system sound
-the moment it changes — instant physical confirmation without moving your
-eyes from where you're typing.
+Most clipboard managers and copy confirmations interrupt you with a visible banner. These two tools take the opposite approach: **audio-whisper** gives you a quiet sound and nothing else, **transient-bezel** gives you a flash of the native macOS HUD style and nothing else. Pick one, or run both.
 
-**Stack:** Bash + `afplay`
+---
 
+## Behavior
+
+| Scenario | Behavior |
+|---|---|
+| Text copied to clipboard | Sound plays / bezel flashes within ~0.4s |
+| Image or file copied | Detected via pasteboard change count — sound/bezel still fires, bezel shows generic "Copied" |
+| Nothing copied yet (script just started) | No sound/bezel on startup — only fires on the *next* change |
+| Clipboard unchanged | Silent — no repeated triggers on every poll |
+| Fullscreen app active (bezel only) | Still renders above it — uses `.screenSaver` window level |
+| Menu bar auto-hide enabled (bezel only) | Bezel position is fixed relative to actual menu bar thickness, not `visibleFrame`, so it doesn't jump when the menu bar auto-hides |
+
+---
+
+## Requirements
+
+- macOS
+- **audio-whisper**: no dependencies — pure Bash + `afplay` (built into macOS)
+- **transient-bezel**: Xcode Command Line Tools (`xcode-select --install` if not already present) — no full Xcode required
+
+---
+
+## Installation
+
+### 1. Clone
+
+```bash
+git clone https://github.com/chakri192/minimal-notifications.git
+cd minimal-notifications
 ```
-audio-whisper/
-├── clipboard-audio-whisper.sh          # the watcher loop
-└── com.user.clipboard-audio-whisper.plist   # launchd config for auto-start at login
-```
 
-### Setup
+### 2. Audio Whisper
 
 ```bash
 chmod +x audio-whisper/clipboard-audio-whisper.sh
 ./audio-whisper/clipboard-audio-whisper.sh &
 ```
 
-### Auto-start at login
-
-```bash
-mkdir -p ~/scripts
-cp audio-whisper/clipboard-audio-whisper.sh ~/scripts/
-# Edit the plist's ProgramArguments path to point at ~/scripts/clipboard-audio-whisper.sh
-# if you copied the repo somewhere other than the path baked into the file.
-cp audio-whisper/com.user.clipboard-audio-whisper.plist ~/Library/LaunchAgents/
-launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.user.clipboard-audio-whisper.plist
-```
-
-### Customizing the sound
-
-Edit `SOUND=` in the script. Any file under `/System/Library/Sounds/` works —
-`Pop`, `Ping`, `Purr`, `Tink`, and `Morse` are all good low-key options.
-
----
-
-## 2. Transient Bezel
-
-A brief, unclickable overlay in the top-right corner of the screen, styled
-with the exact same blur material Apple uses for its own volume/brightness
-HUD. It flashes on clipboard change and disappears without a trace.
-
-**Stack:** Swift + AppKit (`NSVisualEffectView`, material: `.hudWindow`)
-
-An earlier version of this was prototyped in Hammerspoon/Lua using
-`hs.canvas`, but that can only approximate the native blur with flat
-colors — it doesn't have access to real `NSVisualEffectView` materials. This
-version uses AppKit directly for a pixel-accurate match, and needs no
-Accessibility permission grant.
-
-```
-transient-bezel/
-└── main.swift
-```
-
-### Build & run
-
-Requires Xcode Command Line Tools (`xcode-select --install` if you don't
-have them — no full Xcode needed).
+### 3. Transient Bezel
 
 ```bash
 cd transient-bezel
@@ -75,7 +55,22 @@ swiftc main.swift -o clipboard-bezel -O
 ./clipboard-bezel &
 ```
 
-### Auto-start at login
+---
+
+## Auto-start at login
+
+Both ship with a `launchd` agent so they survive reboots without a login item.
+
+### Audio Whisper
+
+```bash
+mkdir -p ~/scripts
+cp audio-whisper/clipboard-audio-whisper.sh ~/scripts/
+cp audio-whisper/com.user.clipboard-audio-whisper.plist ~/Library/LaunchAgents/
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.user.clipboard-audio-whisper.plist
+```
+
+### Transient Bezel
 
 ```bash
 mkdir -p ~/apps/clipboard-bezel
@@ -103,23 +98,58 @@ EOF
 launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.user.clipboard-bezel.plist
 ```
 
-### Config
+---
 
-Tunable constants live at the top of `main.swift`:
+## Configuration
 
-| Constant | Purpose |
-|---|---|
-| `bezelWidth` / `bezelHeight` | Size of the HUD |
-| `marginFromCorner` | Distance from the screen's top-right corner |
-| `cornerRadius` | Corner rounding |
-| `displayDuration` | How long the bezel stays fully visible |
-| `fadeDuration` | Fade in/out speed |
-| `pollInterval` | How often the pasteboard is checked |
-| `previewMaxLength` | Max characters of copied text shown |
+### Audio Whisper — `audio-whisper/clipboard-audio-whisper.sh`
+
+| Variable | Default | Description |
+|---|---|---|
+| `SOUND` | `Morse.aiff` | Any file under `/System/Library/Sounds/` — `Pop`, `Ping`, `Purr`, `Tink` also work well |
+| `VOLUME` | `0.15` | `0.0` (silent) to `1.0` (full) |
+| `POLL_INTERVAL` | `0.4` | Seconds between clipboard checks |
+
+### Transient Bezel — `transient-bezel/main.swift`
+
+| Constant | Default | Description |
+|---|---|---|
+| `bezelWidth` / `bezelHeight` | `260` / `56` | Size of the HUD |
+| `marginFromCorner` | `16` | Distance from the screen's top-right corner |
+| `cornerRadius` | `14` | Corner rounding |
+| `displayDuration` | `1.0` | Seconds fully visible before fading |
+| `fadeDuration` | `0.18` | Fade in/out speed |
+| `pollInterval` | `0.35` | Seconds between pasteboard checks |
+| `previewMaxLength` | `40` | Max characters of copied text shown |
 
 ---
 
-## Stopping either one
+## How it works
+
+**Audio Whisper**
+1. Polls `pbpaste` on a loop and hashes the output with `md5`
+2. When the hash changes, plays the configured sound via `afplay -v` asynchronously so the loop never blocks
+
+**Transient Bezel**
+1. Polls `NSPasteboard.general.changeCount` on a timer (there's no push-based clipboard-change API on macOS, so both tools poll)
+2. On change, positions an `NSPanel` in the top-right corner, offset below the menu bar using `NSStatusBar.system.thickness` rather than `visibleFrame` (which collapses to the full screen height when menu bar auto-hide is on)
+3. Renders an `NSVisualEffectView` with `.hudWindow` material — the same blur material macOS uses for its own volume/brightness HUD — then fades in, holds, and fades out
+
+---
+
+## Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| No sound plays | Check `VOLUME` isn't `0`, and confirm the file exists: `ls /System/Library/Sounds/` |
+| Bezel doesn't appear at all | Confirm the build succeeded: `swiftc main.swift -o clipboard-bezel -O && echo OK`. A stale binary from an earlier build is the most common cause |
+| Bezel overlaps the menu bar | Increase the `+ 10` offset added to `menuBarHeight` in `main.swift` |
+| launchd agent won't load | `launchctl bootstrap` fails silently if the same label is already loaded — run `launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/<plist>` first, then bootstrap again |
+| Multiple instances running | `pgrep -fl clipboard-bezel` / `pgrep -fl clipboard-audio-whisper` to check, `pkill -f <name>` to stop |
+
+---
+
+## Stopping
 
 ```bash
 pkill -f clipboard-audio-whisper
@@ -132,3 +162,20 @@ Or, if installed via launchd:
 launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.user.clipboard-audio-whisper.plist
 launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.user.clipboard-bezel.plist
 ```
+
+---
+
+## License
+
+MIT
+
+## Author
+
+Created by [chakri192](https://github.com/chakri192)
+
+## Contributors
+
+| Contributor | Role |
+|---|---|
+| [chakri192](https://github.com/chakri192) | Author |
+| Claude (Anthropic) | AI pair programmer |
