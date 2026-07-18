@@ -162,20 +162,24 @@ Or, if installed via launchd:
 launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.user.clipboard-audio-whisper.plist
 launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.user.clipboard-bezel.plist
 ```
-
 ---
 
 ## License
 
 MIT
 
-## Author
-
-Created by [chakri192](https://github.com/chakri192)
-
 ## Contributors
 
 | Contributor | Role |
-|---|---|
+|-------------|------|
 | [chakri192](https://github.com/chakri192) | Author |
-| Claude (Anthropic) | AI pair programmer |
+| [aider](https://github.com/Aider-AI/aider) | AI pair programmer |
+
+### AI tooling
+
+README and code contributions assisted by [aider](https://github.com/Aider-AI/aider) using local LLMs via [Ollama](https://ollama.com):
+
+| Model | Used for |
+|-------|----------|
+| `qwen2.5-coder:7b` | Code suggestions, refactoring |
+| `llama3.1:8b` | Prose, documentation, commit messages |
