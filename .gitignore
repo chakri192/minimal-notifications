@@ -1,0 +1,5 @@
+# Compiled Swift binary
+transient-bezel/clipboard-bezel
+
+# macOS
+.DS_Store

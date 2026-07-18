@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Auto-starts clipboard-audio-whisper.sh at login and keeps it running.
+
+  Install:
+    1. Update the ProgramArguments path below to where you saved the script.
+    2. cp com.user.clipboard-audio-whisper.plist ~/Library/LaunchAgents/
+    3. launchctl load ~/Library/LaunchAgents/com.user.clipboard-audio-whisper.plist
+
+  Uninstall:
+    launchctl unload ~/Library/LaunchAgents/com.user.clipboard-audio-whisper.plist
+    rm ~/Library/LaunchAgents/com.user.clipboard-audio-whisper.plist
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.user.clipboard-audio-whisper</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/YOUR_USERNAME/clipboard-audio-whisper.sh</string>
+    </array>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/tmp/clipboard-audio-whisper.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/tmp/clipboard-audio-whisper.err</string>
+</dict>
+</plist>
