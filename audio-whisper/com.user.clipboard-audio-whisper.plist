@@ -4,13 +4,15 @@
 <!--
   Auto-starts clipboard-audio-whisper.sh at login and keeps it running.
 
-  Install:
-    1. Update the ProgramArguments path below to where you saved the script.
+  Easiest install: run ./install.sh audio from the repo root.
+
+  Manual install:
+    1. Replace YOUR_USERNAME below with your username (script lives in ~/scripts/).
     2. cp com.user.clipboard-audio-whisper.plist ~/Library/LaunchAgents/
-    3. launchctl load ~/Library/LaunchAgents/com.user.clipboard-audio-whisper.plist
+    3. launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.user.clipboard-audio-whisper.plist
 
   Uninstall:
-    launchctl unload ~/Library/LaunchAgents/com.user.clipboard-audio-whisper.plist
+    launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.user.clipboard-audio-whisper.plist
     rm ~/Library/LaunchAgents/com.user.clipboard-audio-whisper.plist
 -->
 <plist version="1.0">
@@ -21,7 +23,7 @@
     <key>ProgramArguments</key>
     <array>
         <string>/bin/bash</string>
-        <string>/Users/YOUR_USERNAME/clipboard-audio-whisper.sh</string>
+        <string>/Users/YOUR_USERNAME/scripts/clipboard-audio-whisper.sh</string>
     </array>
 
     <key>RunAtLoad</key>
