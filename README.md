@@ -75,26 +75,8 @@ launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.user.clipboard-audio
 ```bash
 mkdir -p ~/apps/clipboard-bezel
 cp transient-bezel/clipboard-bezel ~/apps/clipboard-bezel/
-cat > ~/Library/LaunchAgents/com.user.clipboard-bezel.plist << 'EOF'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>Label</key>
-    <string>com.user.clipboard-bezel</string>
-    <key>ProgramArguments</key>
-    <array>
-        <string>/Users/YOUR_USERNAME/apps/clipboard-bezel/clipboard-bezel</string>
-    </array>
-    <key>RunAtLoad</key>
-    <true/>
-    <key>KeepAlive</key>
-    <true/>
-    <key>StandardErrorPath</key>
-    <string>/tmp/clipboard-bezel.err</string>
-</dict>
-</plist>
-EOF
+cp transient-bezel/com.user.clipboard-bezel.plist ~/Library/LaunchAgents/
+# Edit the plist first: replace YOUR_USERNAME with your actual username
 launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.user.clipboard-bezel.plist
 ```
 
