@@ -3,3 +3,6 @@ transient-bezel/clipboard-bezel
 
 # macOS
 .DS_Store
+
+# Claude session data
+.claude/
