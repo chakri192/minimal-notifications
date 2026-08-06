@@ -1,7 +1,5 @@
 <div align="center">
 
-<img src="docs/bezel.svg" width="840" alt="The transient bezel displayed in the top-right corner following a copy" />
-
 # minimal-notifications
 
 **Two macOS clipboard indicators that require no dismissal.**
