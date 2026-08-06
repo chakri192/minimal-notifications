@@ -1,178 +1,200 @@
+<div align="center">
+
 # minimal-notifications
 
-Two lightweight macOS clipboard-change indicators, built as an exploration of notification design that stays out of the way entirely — no banners, no Notification Center clutter, no click required to dismiss.
+**Two macOS clipboard indicators that never ask to be dismissed.**
+
+A quiet sound, or a flash of the real system HUD. No banner, no Notification Center entry, no click.
+
+<p>
+  <img alt="Platform" src="https://img.shields.io/badge/macOS-12%2B-1c1c1e?style=flat-square&logo=apple&logoColor=white" />
+  <img alt="Swift" src="https://img.shields.io/badge/Swift-AppKit-1c1c1e?style=flat-square&logo=swift&logoColor=F05138" />
+  <img alt="Bash" src="https://img.shields.io/badge/Bash-zero%20deps-1c1c1e?style=flat-square&logo=gnubash&logoColor=4EAA25" />
+  <img alt="Size" src="https://img.shields.io/badge/~400-lines-1c1c1e?style=flat-square" />
+  <img alt="License" src="https://img.shields.io/badge/license-MIT-1c1c1e?style=flat-square" />
+</p>
+
+<br />
+
+<img src="docs/bezel.svg" width="840" alt="The transient bezel flashing in the top-right corner after a copy in Safari" />
+
+<sub>You press ⌘C. The bezel fades in, tells you what it caught and which app it came from, and is gone before you look away.</sub>
+
+</div>
+
+<br />
 
 ---
 
-## Overview
+## The short version
 
-Most clipboard managers and copy confirmations interrupt you with a visible banner. These two tools take the opposite approach: **audio-whisper** gives you a quiet sound and nothing else, **transient-bezel** gives you a flash of the native macOS HUD style — showing what you copied and the icon of the app you copied it from — and nothing else. Pick one, or run both.
+A copy confirmation is the smallest notification there is, and macOS still turns it into an event — a banner that slides in, sits there, and stacks up in Notification Center until you go clear it. These two tools go the other way: acknowledge the copy, then get out of the way completely.
 
-Both can be paused and resumed together with a single command (`./toggle.sh`) — useful before a screen recording or presentation.
+**audio-whisper** plays a quiet sound. That is the entire feature. 46 lines of Bash, no dependencies, nothing on screen.
 
----
+**transient-bezel** flashes the same floating HUD macOS uses for volume and brightness — same `NSVisualEffectView` material, same blur — showing a preview of what you copied and the icon of the app you copied it from. Then it fades. It is never clickable, never focusable, and leaves nothing behind.
 
-## Behavior
+Run either. Run both. One command silences them together when you're sharing your screen.
 
-| Scenario | Behavior |
-|---|---|
-| Text copied to clipboard | Sound plays / bezel flashes within ~0.4s, bezel shows a text preview |
-| File(s) copied in Finder | Bezel shows the file name (or "3 files copied") |
-| Image copied (e.g. screenshot to clipboard) | Bezel shows "Image copied" |
-| Any copy (bezel) | Icon and name of the source app shown alongside the preview |
-| Paused via `./toggle.sh` | Both tools stay running but go silent until toggled back |
-| Nothing copied yet (script just started) | No sound/bezel on startup — only fires on the *next* change |
-| Clipboard unchanged | Silent — no repeated triggers on every poll |
-| Fullscreen app active (bezel only) | Still renders above it — uses `.screenSaver` window level |
-| Menu bar auto-hide enabled (bezel only) | Bezel position is fixed relative to actual menu bar thickness, not `visibleFrame`, so it doesn't jump when the menu bar auto-hides |
-
----
-
-## Requirements
-
-- macOS
-- **audio-whisper**: no dependencies — pure Bash + `afplay` (built into macOS)
-- **transient-bezel**: Xcode Command Line Tools (`xcode-select --install` if not already present) — no full Xcode required
-
----
-
-## Installation
-
-One command builds both tools, installs them, and registers `launchd` agents so they survive reboots:
-
-```bash
+```zsh
 git clone https://github.com/chakri192/minimal-notifications.git
-cd minimal-notifications
-./install.sh           # or: ./install.sh audio | ./install.sh bezel
+cd minimal-notifications && ./install.sh
 ```
 
-To remove everything the installer created:
-
-```bash
-./uninstall.sh          # or: ./uninstall.sh audio | ./uninstall.sh bezel
-```
-
-### Trying without installing
-
-```bash
-# Audio whisper
-./audio-whisper/clipboard-audio-whisper.sh &
-
-# Transient bezel
-swiftc transient-bezel/main.swift -o transient-bezel/clipboard-bezel -O
-./transient-bezel/clipboard-bezel &
-```
+That builds the Swift binary, installs both tools, and registers `launchd` agents so they come back after a reboot. Pass `audio` or `bezel` to install just one.
 
 ---
 
-## Configuration
+## What each one does
 
-### Audio Whisper
-
-Configured via environment variables — no editing required:
-
-```bash
-SOUND=/System/Library/Sounds/Tink.aiff VOLUME=0.3 ./clipboard-audio-whisper.sh &
-```
-
-| Variable | Default | Description |
+|  | audio-whisper | transient-bezel |
 |---|---|---|
-| `SOUND` | `Morse.aiff` | Any file under `/System/Library/Sounds/` — `Pop`, `Ping`, `Purr`, `Tink` also work well |
-| `VOLUME` | `0.15` | `0.0` (silent) to `1.0` (full) |
-| `POLL_INTERVAL` | `0.4` | Seconds between clipboard checks |
+| Feedback | a sound, nothing visual | a HUD bezel, no sound |
+| Language | Bash, 46 lines | Swift + AppKit, 245 lines |
+| Dependencies | none — `afplay` ships with macOS | Command Line Tools to build, none to run |
+| Change detection | `pbpaste \| md5` | `NSPasteboard.changeCount` |
+| Text copied | yes | yes, with a 40-char preview |
+| Files copied in Finder | yes | yes — the filename, or "3 files copied" |
+| Image or screenshot copied | **no** — `pbpaste` prints nothing, so the hash never moves | yes — "Image copied" |
+| Re-copying identical text | **no** — same hash, reads as no change | yes — `changeCount` still increments |
+| Shows the source app | — | yes, icon and name |
 
-### Transient Bezel
-
-Configured via launch arguments — no recompiling required:
-
-```bash
-./clipboard-bezel -duration 1.5 -position bottom-right -preview 60 &
-```
-
-(To make flags permanent, add them to the `ProgramArguments` array in the plist.)
-
-| Flag | Default | Description |
-|---|---|---|
-| `-position` | `top-right` | Screen corner: `top-right`, `top-left`, `bottom-right`, `bottom-left` |
-| `-width` / `-height` | `300` / `56` | Size of the HUD |
-| `-margin` | `16` | Distance from the chosen corner |
-| `-radius` | `14` | Corner rounding |
-| `-duration` | `1.0` | Seconds fully visible before fading |
-| `-fade` | `0.18` | Fade in/out speed |
-| `-poll` | `0.35` | Seconds between pasteboard checks |
-| `-preview` | `40` | Max characters of copied text shown |
-
-### Pausing both tools
-
-```bash
-./toggle.sh    # pause — e.g. before a screen recording
-./toggle.sh    # run again to resume
-```
-
-This creates/removes `~/.config/minimal-notifications/paused`, which both tools check on every poll — nothing is stopped or restarted, so launchd agents keep running and pick right back up.
+Those two "no" rows are a real limitation rather than something to discover later. Hashing `pbpaste` is exactly what makes audio-whisper dependency-free, and the price is that it only sees what `pbpaste` can print. If you want a signal on screenshots, run the bezel — or run both and let the bezel cover the gap.
 
 ---
 
 ## How it works
 
-**Audio Whisper**
-1. Polls `pbpaste` on a loop and hashes the output with `md5`
-2. When the hash changes, plays the configured sound via `afplay -v` asynchronously so the loop never blocks
+<div align="center">
+<img src="docs/architecture.svg" width="840" alt="Both watchers poll the pasteboard, then pass through a shared pause-file gate before producing output" />
+</div>
 
-**Transient Bezel**
-1. Polls `NSPasteboard.general.changeCount` on a timer (there's no push-based clipboard-change API on macOS, so both tools poll)
-2. On change, positions an `NSPanel` in the configured corner — top positions are offset below the menu bar using `NSStatusBar.system.thickness` rather than `visibleFrame` (which collapses to the full screen height when menu bar auto-hide is on); bottom positions use `visibleFrame` so the bezel clears the Dock
-3. Inspects the pasteboard to pick a label: file URL(s) → file name or count, text → truncated one-line preview, image data → "Image copied"
-4. Grabs `NSWorkspace.shared.frontmostApplication` for the source app's icon and name — the bezel itself runs as an `.accessory` app that never activates, so the frontmost app at copy time is the one the copy came from
-5. Renders an `NSVisualEffectView` with `.hudWindow` material — the same blur material macOS uses for its own volume/brightness HUD — then fades in, holds, and fades out
+Both tools are polling loops. Neither hooks the pasteboard, because macOS publishes no change notification for it — polling is the only honest option, and at 0.35–0.4s it costs nothing measurable.
+
+**The first tick never fires.** Both watchers seed a baseline at startup and compare against it, so launching an agent doesn't announce whatever happened to already be on your clipboard.
+
+**The pause switch is a file, not a signal.** `./toggle.sh` creates or removes `~/.config/minimal-notifications/paused`, and both loops check for it every tick. Pausing is instant and symmetric, and nothing is stopped or restarted — the agents stay up and simply go quiet. Useful right before a screen recording.
+
+**The source app is whoever is frontmost.** The bezel sets its activation policy to `.accessory`, so it has no Dock icon, no menu bar item, and can never become frontmost itself. That makes "the frontmost app at the moment the pasteboard changed" a reliable stand-in for "the app you copied from".
+
+### The two details that took the longest
+
+**Staying above fullscreen.** An ordinary window vanishes the moment you enter a fullscreen app. The bezel uses window level `.screenSaver` with a collection behavior of `[.canJoinAllSpaces, .stationary, .ignoresCycle]`, so it draws over fullscreen video and over Mission Control, without dragging itself into the window cycle.
+
+**Not hopping when the menu bar hides.** The obvious way to anchor a top-corner window is `screen.visibleFrame`, which already excludes the menu bar. But with menu bar auto-hide enabled `visibleFrame` grows and shrinks, and the bezel would visibly jump depending on where your mouse happened to be. It anchors off `screen.frame` plus `NSStatusBar.system.thickness` instead, which is constant. Bottom corners still use `visibleFrame` — down there the thing to clear is the Dock.
 
 ---
 
-## Troubleshooting
+## Configuration
 
-| Problem | Fix |
+Nothing needs configuring. Everything can be.
+
+### transient-bezel
+
+Options are read through `UserDefaults`, so they are plain `-key value` arguments — no recompile, no config file.
+
+```zsh
+~/apps/clipboard-bezel/clipboard-bezel -position bottom-right -duration 1.5 -width 320
+```
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `-position` | `top-right` | `top-right`, `top-left`, `bottom-right`, `bottom-left` |
+| `-duration` | `1.0` | Seconds held at full opacity |
+| `-fade` | `0.18` | Fade in / out duration |
+| `-poll` | `0.35` | Seconds between pasteboard checks |
+| `-width` · `-height` | `300` · `56` | Bezel size, in points |
+| `-radius` · `-margin` | `14` · `16` | Corner rounding · distance from the screen corner |
+| `-preview` | `40` | Characters of text preview before truncating |
+
+To make a flag permanent, add it to `ProgramArguments` in `~/Library/LaunchAgents/com.user.clipboard-bezel.plist` and reload the agent.
+
+### audio-whisper
+
+Options are environment variables.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `SOUND` | `/System/Library/Sounds/Morse.aiff` | Anything `afplay` can play |
+| `VOLUME` | `0.15` | `0.0` silent → `1.0` full |
+| `POLL_INTERVAL` | `0.4` | Seconds between checks |
+| `PAUSE_FILE` | `~/.config/minimal-notifications/paused` | Shared pause flag |
+
+```zsh
+SOUND=/System/Library/Sounds/Tink.aiff VOLUME=0.3 ~/scripts/clipboard-audio-whisper.sh &
+```
+
+`ls /System/Library/Sounds/` for the full set. `Pop`, `Tink`, and `Morse` are the ones that don't sound like an error.
+
+---
+
+## Everyday use
+
+```zsh
+./toggle.sh              # pause both — run again to resume
+./install.sh bezel       # rebuild and reinstall after editing main.swift
+./uninstall.sh           # stop the agents and remove every installed file
+```
+
+Check they're alive, or read what they logged:
+
+```zsh
+launchctl list | grep clipboard
+tail -f /tmp/clipboard-bezel.err /tmp/clipboard-audio-whisper.err
+```
+
+### Trying it without installing anything
+
+```zsh
+./audio-whisper/clipboard-audio-whisper.sh &
+swiftc transient-bezel/main.swift -o /tmp/clipboard-bezel -O && /tmp/clipboard-bezel &
+```
+
+`pkill -f clipboard-audio-whisper` and `pkill -f clipboard-bezel` to stop them again.
+
+---
+
+## When something is off
+
+| Symptom | Cause |
 |---|---|
-| Neither tool fires at all | You may have left them paused — run `./toggle.sh`, or check for `~/.config/minimal-notifications/paused` |
-| No sound plays | Check `VOLUME` isn't `0`, and confirm the file exists: `ls /System/Library/Sounds/` |
-| Bezel doesn't appear at all | Confirm the build succeeded: `swiftc main.swift -o clipboard-bezel -O && echo OK`. A stale binary from an earlier build is the most common cause |
-| Bezel overlaps the menu bar | Increase the `+ 10` offset added to `menuBarHeight` in `main.swift` |
-| launchd agent won't load | `launchctl bootstrap` fails silently if the same label is already loaded — run `launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/<plist>` first, then bootstrap again |
-| Multiple instances running | `pgrep -fl clipboard-bezel` / `pgrep -fl clipboard-audio-whisper` to check, `pkill -f <name>` to stop |
+| Neither one fires | They're probably paused. Run `./toggle.sh`, or look for `~/.config/minimal-notifications/paused` |
+| No sound, bezel fine | `VOLUME` is `0`, or `SOUND` points at a file that isn't there — the script prints the available sounds and exits when so |
+| Bezel never appears | A stale binary from an earlier build. Re-run `./install.sh bezel`, which recompiles before it installs |
+| Bezel overlaps the menu bar | Raise the `topInset` offset in `main.swift` — it is `NSStatusBar.system.thickness + 10` |
+| Agent won't load | `launchctl bootstrap` fails if the label is already loaded. `launchctl bootout gui/$(id -u)/<label>` first — this is exactly what `install.sh` does for you |
+| Two bezels at once | `pgrep -fl clipboard-bezel` to confirm, `pkill -f clipboard-bezel` to clear, then reinstall |
 
 ---
 
-## Stopping
+## Layout
 
-If installed via `./install.sh`, remove everything with:
-
-```bash
-./uninstall.sh
+```
+minimal-notifications/
+├── install.sh                 # build → install → bootstrap launchd   [audio|bezel|all]
+├── uninstall.sh               # bootout → remove every installed file
+├── toggle.sh                  # create/remove the shared pause flag
+├── transient-bezel/
+│   ├── main.swift             # bezel window, pasteboard watcher, config
+│   └── com.user.clipboard-bezel.plist
+├── audio-whisper/
+│   ├── clipboard-audio-whisper.sh
+│   └── com.user.clipboard-audio-whisper.plist
+└── docs/                      # the diagrams in this README
 ```
 
-If running ad-hoc in the background:
+`install.sh` substitutes your username into the plists before copying them into `~/Library/LaunchAgents/`, so the files in the repo stay generic. It also `bootout`s any existing agent before `bootstrap`ing, which is why re-running it is always safe.
 
-```bash
-pkill -f clipboard-audio-whisper
-pkill -f clipboard-bezel
-```
+Installed paths are `~/scripts/clipboard-audio-whisper.sh` and `~/apps/clipboard-bezel/clipboard-bezel`. `uninstall.sh` removes exactly those and nothing else.
+
+---
+
+## Requirements
+
+macOS 12 or newer. audio-whisper needs nothing further. transient-bezel needs the Xcode Command Line Tools to compile — `xcode-select --install` — but not full Xcode, and once built the binary depends on nothing beyond system frameworks.
+
 ---
 
 ## License
 
-MIT
-
-## Contributors
-
-| Contributor | Role |
-|-------------|------|
-| [chakri192](https://github.com/chakri192) | Author |
-| [aider](https://github.com/Aider-AI/aider) | AI pair programmer |
-
-### AI tooling
-
-README and code contributions assisted by [aider](https://github.com/Aider-AI/aider) using local LLMs via [Ollama](https://ollama.com):
-
-| Model | Used for |
-|-------|----------|
-| `qwen2.5-coder:7b` | Code suggestions, refactoring |
-| `llama3.1:8b` | Prose, documentation, commit messages |
+MIT — see [LICENSE](LICENSE).
