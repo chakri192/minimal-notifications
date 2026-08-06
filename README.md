@@ -194,3 +194,10 @@ macOS 12 or newer. audio-whisper needs nothing further. transient-bezel needs th
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+## Contributors
+
+| | |
+|---|---|
+| [chakri192](https://github.com/chakri192) | Author |
+| [aider](https://github.com/Aider-AI/aider) | AI pair programmer |
