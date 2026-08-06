@@ -65,10 +65,6 @@ Those two "no" rows are a real limitation rather than something to discover late
 
 ## How it works
 
-<div align="center">
-<img src="docs/architecture.svg" width="840" alt="Both watchers poll the pasteboard, then pass through a shared pause-file gate before producing output" />
-</div>
-
 Both tools are polling loops. Neither hooks the pasteboard, because macOS publishes no change notification for it — polling is the only honest option, and at 0.35–0.4s it costs nothing measurable.
 
 **The first tick never fires.** Both watchers seed a baseline at startup and compare against it, so launching an agent doesn't announce whatever happened to already be on your clipboard.
@@ -180,7 +176,7 @@ minimal-notifications/
 ├── audio-whisper/
 │   ├── clipboard-audio-whisper.sh
 │   └── com.user.clipboard-audio-whisper.plist
-└── docs/                      # the diagrams in this README
+└── docs/                      # the image in this README
 ```
 
 `install.sh` substitutes your username into the plists before copying them into `~/Library/LaunchAgents/`, so the files in the repo stay generic. It also `bootout`s any existing agent before `bootstrap`ing, which is why re-running it is always safe.
